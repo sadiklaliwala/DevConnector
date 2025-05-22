@@ -1,0 +1,39 @@
+frontend/
+│
+├── public/
+│   └── index.html
+│
+├── src/
+│   ├── assets/               # Static files (images, icons, etc.)
+│   ├── components/           # Reusable UI components (e.g., Button, Navbar)
+│   ├── features/             # Redux feature folders (slice-based)
+│   │   ├── auth/             # Authentication feature
+│   │   │   ├── authSlice.js
+│   │   │   └── AuthComponent.jsx
+│   │   ├── posts/            # Posts feature (for example)
+│   │   │   ├── postSlice.js
+│   │   │   └── PostList.jsx
+│   │   └── ...               # Other features
+│   │
+│   ├── pages/                # Route-based pages (e.g., Home, Profile)
+│   │   ├── Home.jsx
+│   │   ├── Login.jsx
+│   │   └── Profile.jsx
+│   │
+│   ├── app/                  # App setup
+│   │   ├── store.js          # Redux store configuration
+│   │   └── rootReducer.js    # Combine all reducers (optional)
+│   │
+│   ├── services/             # API calls (can use Axios or fetch)
+│   │   ├── api.js
+│   │   └── authService.js
+│   │
+│   ├── utils/                # Helper functions
+│   ├── hooks/                # Custom hooks (e.g., useAuth)
+│   ├── App.jsx
+│   ├── main.jsx              # Entry point (if using Vite)
+│   └── index.js              # Entry point (if using CRA)
+│
+├── .env
+├── package.json
+└── README.md
