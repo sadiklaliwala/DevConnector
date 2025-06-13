@@ -22,7 +22,6 @@ router.get("/test", (req, res) => {
 //@routes GET api/users/register
 //@desc user register
 //@access public
-
 router.post("/register", (req, res) => {
   const { errors, isvalid } = validateregisterinput(req.body);
   // console.log(errors);
@@ -120,6 +119,7 @@ router.post("/login", (req, res) => {
       console.log(err);      return res.status(500).json({ message: 'Internal Server Error' });
     });
 });
+
 
 //@routes GET api/users/current
 //@desc fetch user login 
