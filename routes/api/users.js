@@ -8,7 +8,6 @@ const jwt = require("jsonwebtoken");
 const passport = require('passport');
 const validateregisterinput = require('../../validator/registrationvalidator');
 const validateLogininput = require('../../validator/loginvalidator');
-// const generateJwtToken = require('../utils/jwt');
 const generateJwtToken = require("../../utils/jwt");
 
 
@@ -24,107 +23,59 @@ router.get("/test", (req, res) => {
 //@routes GET api/users/register
 //@desc user register
 //@access public
-// router.post("/register", (req, res) => {
-//   const { errors, isvalid } = validateregisterinput(req.body);
-//   // console.log(errors);
-
-//   //check validatioin 
-//   if (!isvalid) {
-//     return res.status(400).json(errors);
-//   }
-//   User.findOne({ email: req.body.email })
-//     .then((user) => {
-//       if (user) {
-//         errors.email = " Email Already Exist ";
-//         return res.status(400).json(errors);
-//       } else {
-//         const avtar = gravtar.url(req.body.email, {
-//           s: "200", //size of image
-//           r: "pg", //rating of image
-//           d: "mm", //  defualt status
-//         });
-//         const newuser = new User({
-//           name: req.body.name,
-//           email: req.body.email,
-//           avtar,
-//           password: req.body.password,
-//         });
-//         bcrypt.genSalt(10, (err, salt) => {
-//           bcrypt.hash(req.body.password, salt, (err, hash) => {
-//             if (err) throw err;
-//             newuser.password = hash;
-//             newuser
-//               .save()
-//               .then((user) => { return res.json(user) })
-//               .catch(err => {
-//                 if (err.name === 'ValidationError') {
-//                   return res.status(400).json(err);
-//                 }
-//                 console.log(err);
-//                 return res.status(500).json({ message: 'Internal Server Error' });
-//               });
-//             //             .catch((err) => console.log(err));
-//           });
-//         });
-//       }
-//     }).catch(err => {
-//       console.log(err);
-//       return res.status(500).json({ message: 'Internal Server Error' });
-//     });
-// });
-
-router.post("/register", (req, res) => {
+router.post("/register", async (req, res) => {
   const { errors, isvalid } = validateregisterinput(req.body);
-  if (!isvalid) return res.status(400).json(errors);
+  // console.log(errors);
 
-  User.findOne({ email: req.body.email })
-    .then(user => {
-      if (user) {
-        errors.email = "Email Already Exist";
-        return res.status(400).json(errors);
-      } else {
-        const avatar = gravtar.url(req.body.email, { s: "200", r: "pg", d: "mm" });
-        const newUser = new User({
-          name: req.body.name,
-          email: req.body.email,
-          avatar,
-          password: req.body.password,
-        });
+  //check validatioin 
+  if (!isvalid) {
+    return res.status(400).json(errors);
+  }
 
-        bcrypt.genSalt(10, (err, salt) => {
-          bcrypt.hash(req.body.password, salt, (err, hash) => {
-            if (err) {
-              console.error(err);
-              return res.status(500).json({ message: "Internal Server Error" });
-            }
-            newUser.password = hash;
-            newUser.save()
-              .then(user => {
-                const token = generateJwtToken(user);
-                res.json({
-                  success: true,
-                  token: "Bearer " + token,
-                  user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                  }
-                });
-              })
-              .catch(err => {
-                if (err.name === 'ValidationError') return res.status(400).json(err);
-                console.error(err);
-                res.status(500).json({ message: "Internal Server Error" });
-              });
-          });
-        });
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      res.status(500).json({ message: "Internal Server Error" });
-    });
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    if (user) {
+      errors.email = " Email Already Exist ";
+      return res.status(400).json(errors);
+    } else {
+      const avtar = gravtar.url(req.body.email, {
+        s: "200", //size of image
+        r: "pg", //rating of image
+        d: "mm", //  defualt status
+      });
+
+      const newuser = new User({
+        name: req.body.name,
+        email: req.body.email,
+        avtar,
+        password: req.body.password,
+      });
+
+      const salt = await bcrypt.genSalt(10);
+      newuser.password = await bcrypt.hash(req.body.password, salt);
+
+      const savedUser = await newuser.save();
+      const token = generateJwtToken(savedUser);
+
+      return res.json({
+        success: true,
+        token: "Bearer " + token,
+        user: {
+          id: savedUser.id,
+          name: savedUser.name,
+          email: savedUser.email,
+        }
+      });
+    }
+  } catch (err) {
+    if (err.name === 'ValidationError') {
+      return res.status(400).json(err);
+    }
+    console.log(err);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
 });
+
 
 router.get("/login", (req, res) => {
   return res.status(500).json({ message: 'Internal Server Error' });
@@ -134,7 +85,7 @@ router.get("/login", (req, res) => {
 //@desc user login
 //@access public
 
-router.post("/login", (req, res) => {
+router.post("/login", async (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   //check if email is null of not
@@ -145,44 +96,40 @@ router.post("/login", (req, res) => {
     return res.status(400).json(errors);
   }
 
-  User.findOne({ email })
-    .then((user) => {
-      // if email not found then return 404 status
-      if (!user) {
-        errors.email = "User Not found "
-        return res.status(404).json(errors)
-      };
-      //compare the password to hash
-      bcrypt.compare(password, user.password)
-        .then((isMatch) => {
-          if (isMatch) {
-            //User Mathched
-            const payload = { id: user.id, name: user.name, avatar: user.avatar };
-            //  Sign token Without Function 
-            jwt.sign(payload, key.secretkey, { expiresIn: '7d' }, (err, token) => {
-              return res.json({ token: "Bearer " + token });
-            });
-            //  Sign token With Function 
-            // const token = generateJwtToken(req.user);
-            // return res.json({ token: "Bearer " + token, user: req.user });
-          }
-          else {
-            errors.password = "Password is Incorrect"
-            return res.status(400).json(errors);
-          }
-        }).catch(err => {
-          if (err.name === 'ValidationError') {
-            return res.status(400).json(err);
-          }
-          console.log(err);
-          return res.status(500).json({ message: 'Internal Server Error' });
-        });
-    }).catch(err => {
-      console.log(err); return res.status(500).json({ message: 'Internal Server Error' });
-    });
+  try {
+    const user = await User.findOne({ email });
+
+    // if email not found then return 404 status
+    if (!user) {
+      errors.email = "User Not found "
+      return res.status(404).json(errors)
+    };
+
+    //compare the password to hash
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (isMatch) {
+      //User Mathched
+      const payload = { id: user.id, name: user.name, avatar: user.avatar };
+      //  Sign token Without Function 
+      jwt.sign(payload, key.secretkey, { expiresIn: '7d' }, (err, token) => {
+        return res.json({ token: "Bearer " + token });
+      });
+      //  Sign token With Function 
+      // const token = generateJwtToken(req.user);
+      // return res.json({ token: "Bearer " + token, user: req.user });
+    } else {
+      errors.password = "Password is Incorrect"
+      return res.status(400).json(errors);
+    }
+  } catch (err) {
+    if (err.name === 'ValidationError') {
+      return res.status(400).json(err);
+    }
+    console.log(err);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
 });
-
-
 
 //@routes GET api/users/google
 //@desc Register Using  Google Auth
@@ -194,19 +141,10 @@ router.get('/auth/google',
   })
 );
 
-// router.get('/auth/google/callback',
-//   passport.authenticate('google', { failureRedirect: '/login' }),
-//   (req, res) => {
-//     res.redirect('/profile');
-//   }
-// );
 
 router.get('/auth/google/callback',
   passport.authenticate('google', { session: false, failureRedirect: '/login' }),
   (req, res) => {
-    // const token = generateJwtToken(req.user);
-    // console.log("Token ",token)
-    // return res.json({ token: "Bearer " + token, user: req.user });
     return res.send('/dashboard');
   }
 );
@@ -242,8 +180,4 @@ router.get('/current', passport.authenticate('jwt', { session: false }), (req, r
   })
 });
 
-
-
 module.exports = router;
-
-

@@ -14,7 +14,6 @@ const jwtOpts = {
   secretOrKey: keys.secretkey,
 };
 
-
 if (typeof keys.secretkey !== "string") {
   throw new Error("Secret key must be a string");
 }
@@ -22,10 +21,13 @@ if (typeof keys.secretkey !== "string") {
 module.exports = (passport) => {
   // JWT Strategy - verify JWT tokens for protected routes
   passport.use(
-    new JwtStrategy(jwtOpts, (jwt_payload, done) => {
-      User.findById(jwt_payload.id)
-        .then((user) => (user ? done(null, user) : done(null, false)))
-        .catch((err) => done(err, false));
+    new JwtStrategy(jwtOpts, async (jwt_payload, done) => {
+      try {
+        const user = await User.findById(jwt_payload.id);
+        return done(null, user || false);
+      } catch (err) {
+        return done(err, false);
+      }
     })
   );
 
@@ -35,7 +37,7 @@ module.exports = (passport) => {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.CALLBACK_URL+'/api/users/auth/google/callback',
+        callbackURL: process.env.CALLBACK_URL + '/api/users/auth/google/callback',
         // callbackURL: 'http://localhost:5000/api/users/auth/google/callback',
         passReqToCallback: true,
       },
